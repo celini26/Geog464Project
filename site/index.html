@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Schools and nearby recreation – Montréal</title>
+
+  <!-- Leaflet's own stylesheet: without it the map tiles and popups look broken -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <!-- Your own styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Montréal schools and their closest recreation sites</h1>
+    <p id="status">Loading data…</p>
+  </header>
+
+  <div id="layout">
+    <aside id="map-help">
+      <p>This Map is made for young parents and families to find schools with nearby age appropriate recreational facilities</p>
+      <strong>How to use this map</strong>
+      <p>Click a school marker to see its closest recreational facilities.</p>
+      <p>Zoom with the + / − buttons or your scroll wheel.</p>
+    </aside>
+
+    <div id="map"></div>
+  </div>
+
+  <!-- Leaflet's JavaScript, then your own script (order matters: yours uses Leaflet) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
