@@ -8,6 +8,18 @@
   <!-- Leaflet's own stylesheet: without it the map tiles and popups look broken -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
+<!-- One icon button, top-right (positioned by the CSS) -->
+<div id="toolbar">
+  <button id="btn-filter" title="Filter the map">☰</button>
+</div>
+ 
+<!-- Filter panel. "hidden" = starts closed. The checkboxes are created by script.js. -->
+<div id="panel-filter" class="panel" hidden>
+  <h3>School type</h3>
+  <div id="ordre-checks"></div>
+  <h3>Recreation type</h3>
+  <div id="type-checks"></div>
+</div>
   <!-- Your own styles -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -26,7 +38,7 @@
     </aside>
 
     <div id="map"></div>
-  </div>
+
 
   <!-- Leaflet's JavaScript, then your own script (order matters: yours uses Leaflet) -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

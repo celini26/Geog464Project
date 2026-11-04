@@ -25,3 +25,19 @@ What I changed: I removed adult sporting facilities, as well as outdoor spaces w
 
 # AI Use
 Ai was used to receive certain code to produce the html as well as the script.js. the AI used was the free version of Claude. However, most credits have to be given to the TAs and my tutor which both helped me alot to understand this project and find code to realise my first action for my MVP. 
+
+# A3 card
+## A3 feature: Filter by school type and recreation type
+
+For A3 I will add a filter panel behind an icon, so that my reader can choose which school types are shown and which recreation types count as "closest".
+It has depth because it responds to the reader and recalculates the three nearest recreation sites and their distances after each change.
+I will know it works when unticking a recreation type changes the list in the school's popup and the green lines on the map.
+My edge case is unticking every recreation type.
+
+## Tests
+Test 1. I untick "Sportif" in the filter, then click a school.
+ Expected: the popup lists the three nearest sites of the types still ticked (no "Sportif"), each with a distance in metres, and green lines go to those sites.
+Test 2. I click a second school after the first one.
+ Expected: the first school's green lines disappear, and only the second school's lines show.
+Test 3. I untick every recreation type, then click a school.
+ Expected: the popup says "No recreation type is ticked in the filter." There is no console error.

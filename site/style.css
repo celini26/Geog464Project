@@ -38,3 +38,47 @@ header p { margin: 4px 0 0; font-size: 14px; color: #DCBD23; }
   flex: 1;
   height: 100%;
 }
+
+
+ 
+
+
+ 
+/* Makes the HTML "hidden" attribute really hide a panel
+   (without this, the display rules above could override it). */
+.panel[hidden] {
+  display: none;
+}
+ 
+/* One checkbox per line, with a little space between them */
+.panel label {
+  display: block;
+  margin: 4px 0;
+}
+#layout {
+  position: relative;
+}
+
+#toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel {
+  position: absolute;
+  top: 10px;
+  right: 60px;
+  width: 280px;
+  max-height: 70vh;
+  overflow: auto;
+  z-index: 2000;
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
