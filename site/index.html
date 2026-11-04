@@ -62,13 +62,12 @@
       <div id="ordre-checks"></div>
       <h3>Recreation type</h3>
       <div id="type-checks"></div>
-      <!-- Distance slider: 100 to 3000 metres in steps of 100, starting at 1000 -->
-      <h3>Maximum distance: <span id="dist-label">1000</span> m</h3>
-      <input type="range" id="dist-range" min="100" max="3000" step="100" value="1000">
+      <!-- Distance slider: 1 to 3000 metres in steps of 100, starting at 1000 -->
+      <h3>Maximum distance: <span id="dist-label">100</span> m</h3>
+      <input type="range" id="dist-range" min="1" max="500" step="1" value="100">
     </div>
   </div>
-
-  <!-- Leaflet's JavaScript first, then yours (order matters: yours uses Leaflet).
+.
        Both must come AFTER the elements above, so they exist when the script runs. -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="script.js"></script>
