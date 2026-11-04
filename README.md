@@ -35,12 +35,12 @@ I will know it works when unticking a recreation type changes the list in the sc
 My edge case is unticking every recreation type.
 
 ## Tests
-Test 1. I untick "Sportif" in the filter, then click a school.
- Expected: the popup lists the three nearest sites of the types still ticked (no "Sportif"), each with a distance in metres, and green lines go to those sites.
+Test 1. I tick a recreational site in the filter, then click a school, i put in a distance.
+ Expected: Once i press on a school the popup lists the three nearest sites of the types still ticked (no "Sportif"), each with a distance in metres, and green lines go to those sites. it will not show anything but the school location if nothing is selected in sites.
 Test 2. I click a second school after the first one.
  Expected: the first school's green lines disappear, and only the second school's lines show.
-Test 3. I untick every recreation type, then click a school.
- Expected: the popup says "No recreation type is ticked in the filter." There is no console error.
+Test 3. I search a false name in the search bar.
+ Expected: there will be an error message in the pop up explaingn that there is a spelling error
 
  First test run:
  - All checks passed --> however, it is not user friendly i will have to change it
