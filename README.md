@@ -44,3 +44,18 @@ Test 3. I search a false name in the search bar.
 
  First test run:
  - All checks passed --> however, it is not user friendly i will have to change it
+
+ - In Lab 7: Passed all tests
+
+
+ ## Pre-flight report (Lab 7)
+| Check | Result | What I did |
+| --- | --- | --- |
+| 1. Cold start | pass 
+| 2. Read every label | pass 
+| 3. Ask twice | pass 
+| 4. The edge | pass 
+| 5. The data does not come | pass 
+| 6. On a phone (size view and my phone) | pass 
+| 7. Mouse in my pocket | pass 
+| 8. Accessibility audit | pass 
