@@ -41,3 +41,6 @@ Test 2. I click a second school after the first one.
  Expected: the first school's green lines disappear, and only the second school's lines show.
 Test 3. I untick every recreation type, then click a school.
  Expected: the popup says "No recreation type is ticked in the filter." There is no console error.
+
+ First test run:
+ - All checks passed --> however, it is not user friendly i will have to change it

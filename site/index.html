@@ -2,45 +2,74 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <!-- Makes the page fit phone screens -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Schools and nearby recreation – Montréal</title>
 
-  <!-- Leaflet's own stylesheet: without it the map tiles and popups look broken -->
+  <!-- Leaflet's own stylesheet: without it the map and popups look broken -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-
-<!-- One icon button, top-right (positioned by the CSS) -->
-<div id="toolbar">
-  <button id="btn-filter" title="Filter the map">☰</button>
-</div>
- 
-<!-- Filter panel. "hidden" = starts closed. The checkboxes are created by script.js. -->
-<div id="panel-filter" class="panel" hidden>
-  <h3>School type</h3>
-  <div id="ordre-checks"></div>
-  <h3>Recreation type</h3>
-  <div id="type-checks"></div>
-</div>
-  <!-- Your own styles -->
+  <!-- Your own styles (including the buttons and panels) -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Title and status line. script.js writes into <p id="status">. -->
   <header>
     <h1>Montréal schools and their closest recreation sites</h1>
     <p id="status">Loading data…</p>
   </header>
 
+  <!-- #layout is the reference box: the buttons and panels are positioned
+       relative to it, so they sit on the map and never over the title. -->
   <div id="layout">
-    <aside id="map-help">
-      <p>This Map is made for young parents and families to find schools with nearby age appropriate recreational facilities</p>
-      <strong>How to use this map</strong>
-      <p>Click a school marker to see its closest recreational facilities.</p>
-      <p>Zoom with the + / − buttons or your scroll wheel.</p>
-    </aside>
-
+    <!-- Leaflet draws the map inside this empty div -->
     <div id="map"></div>
 
+    <!-- The three round buttons. script.js finds each one by its id. -->
+    <div id="toolbar">
+      <button class="circle" id="btn-info" title="About this map">i</button>
+      <button class="circle" id="btn-search" title="Search">🔍</button>
+      <button class="circle" id="btn-filter" title="Filter">☰</button>
+    </div>
 
-  <!-- Leaflet's JavaScript, then your own script (order matters: yours uses Leaflet) -->
+    <!-- INFO panel. "hidden" = closed when the page loads.
+         Replace the text in [brackets] with your own. -->
+    <div id="panel-info" class="panel" hidden>
+      <h3>About this map</h3>
+      <p>Made for young parents and families to find schools with nearby age-appropriate recreation.</p>
+      <strong>How to use it</strong>
+      <p>The map starts empty. Open the filter (☰) and tick school and recreation types to show them. Click a school to see its closest recreation sites within the distance you set. Use the search (🔍) to find a school or recreation site by name.</p>
+      <strong>Data sources</strong>
+      <p>Schools: [title, publisher, link, licence, date accessed, what you changed].</p>
+      <p>Recreation sites: [title, publisher, link, licence, date accessed, what you changed].</p>
+      <p>Distances are straight-line, not walking time.</p>
+    </div>
+
+    <!-- SEARCH panel -->
+    <div id="panel-search" class="panel" hidden>
+      <h3>Search</h3>
+      <input id="search-input" placeholder="School or recreation site">
+      <button id="search-go">Search</button>
+      <!-- Red error message appears here, right under the search bar -->
+      <p id="search-msg" class="err"></p>
+      <!-- When several places match, script.js adds clickable buttons here -->
+      <div id="search-results"></div>
+    </div>
+
+    <!-- FILTER panel. script.js creates the checkboxes inside the two empty divs
+         from the values found in your data. -->
+    <div id="panel-filter" class="panel" hidden>
+      <h3>School type</h3>
+      <div id="ordre-checks"></div>
+      <h3>Recreation type</h3>
+      <div id="type-checks"></div>
+      <!-- Distance slider: 100 to 3000 metres in steps of 100, starting at 1000 -->
+      <h3>Maximum distance: <span id="dist-label">1000</span> m</h3>
+      <input type="range" id="dist-range" min="100" max="3000" step="100" value="1000">
+    </div>
+  </div>
+
+  <!-- Leaflet's JavaScript first, then yours (order matters: yours uses Leaflet).
+       Both must come AFTER the elements above, so they exist when the script runs. -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="script.js"></script>
 </body>

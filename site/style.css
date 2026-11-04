@@ -55,30 +55,70 @@ header p { margin: 4px 0 0; font-size: 14px; color: #DCBD23; }
   display: block;
   margin: 4px 0;
 }
-#layout {
-  position: relative;
-}
 
+
+/* The layout box is the reference point: "absolute" children below are
+   positioned relative to it, so they sit on the map, not over the title. */
+#layout { position: relative; }
+
+/* Row of the three round buttons, lower-left corner of the map.
+   bottom/left = distance from the bottom and left edges of #layout.
+   z-index: 2000 puts it above Leaflet's own layers.
+   display: flex lays the buttons out side by side; gap = space between them. */
 #toolbar {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  bottom: 20px;
+  left: 10px;
   z-index: 2000;
   display: flex;
-  flex-direction: column;
   gap: 8px;
 }
 
+/* Round button: equal width and height, and border-radius: 50% makes a circle. */
+.circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid #888;
+  background: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer; /* hand cursor on hover */
+}
+
+/* The panels open ABOVE the buttons: bottom 72px = button bottom (20px)
+   + button height (42px) + a small gap.
+   max-height + overflow: auto = scroll inside if the content is taller. */
 .panel {
   position: absolute;
-  top: 10px;
-  right: 60px;
-  width: 280px;
-  max-height: 70vh;
+  bottom: 72px;
+  left: 10px;
+  width: 300px;
+  max-height: 60vh; /* vh = percent of the screen height */
   overflow: auto;
   z-index: 2000;
   background: white;
   padding: 12px;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* soft shadow */
 }
+
+/* Makes the HTML "hidden" attribute really hide a panel
+   (without this, the display rules above could override it). */
+.panel[hidden] { display: none; }
+
+/* One checkbox per line */
+.panel label { display: block; margin: 4px 0; }
+
+/* The slider fills the panel width */
+.panel input[type="range"] { width: 100%; }
+
+/* Search box width, and clickable results: one per line */
+#search-input { width: 70%; }
+#search-results button { display: block; width: 100%; text-align: left; margin: 2px 0; cursor: pointer; }
+
+/* Error messages (search message and popup messages) are red */
+.err { color: #b00020; margin: 6px 0 0; }
+
+/* Turns the background map grey, without changing your dots or lines */
+.leaflet-tile-pane { filter: grayscale(70%) brightness(1.05); } 

@@ -1,200 +1,306 @@
-
-// THE FEATURE (matches the A3 card and tests):
-//   EVENT   : the reader clicks the filter icon, ticks/unticks a checkbox, or clicks a school
-//   HANDLER : togglePanel(), the checkbox "change" function, showNearest()
-//   UPDATE  : the panel opens/closes, circles are redrawn, the popup list and
-//             green lines are recalculated using only the ticked recreation types
+// =====================================================================
+// script.js (version 2): empty map by default, three round buttons
+// (info, search, filter), a distance slider and error messages.
+// Replaces your whole site/script.js.
+// =====================================================================
+//
+// VOCABULARY (useful in class)
+//   EVENT   = something the reader does: a click, ticking a box, moving the slider, pressing Enter
+//   HANDLER = the function that runs when that event happens
+//   UPDATE  = what the page changes as a result: circles redrawn, a popup opened, a message shown
 //
 // ORGANISATION
-//   Section 0: settings            Section 3: helper that finds nearest sites
-//   Section 1: map and tiles       Section 4: load data, build the filter
-//   Section 2: helper that loads   Section 5: the filter icon button
-//              a file
+//   0. Settings                       3. Load the data, then build everything
+//   1. Map and background             4. The three round buttons
+//   2. Small helper functions
+//
+// SYNTAX NOTE: "x => y" is a short way of writing "function (x) { return y; }".
 // =====================================================================
 
 
 // ---------- 0. Settings ----------
-// ../ means "go up one folder": data/ sits next to site/, not inside it.
+// "const" = a value that is never reassigned. ../ means "one folder up":
+// data/ sits NEXT TO site/, not inside it.
 const SCHOOLS_FILE = '../data/schools_json_final.geojson';
 const RECREATION_FILE = '../data/recreation_filtered.geojson';
-const HOW_MANY = 3; // how many nearest recreation sites to show
+const HOW_MANY = 3; // how many nearest recreation sites are listed for a school
 
 
-// ---------- 1. Map and base layer ----------
-// L is Leaflet. This builds the map inside <div id="map"> and centres it on Montréal.
-const map = L.map('map').setView([45.51, -73.58], 12); // [latitude, longitude], zoom
+// ---------- 1. Map and background ----------
+// L is Leaflet, the map library loaded in index.html.
+// L.map('map') builds a map inside <div id="map">.
+// preferCanvas draws the dots with the faster "canvas" method (we have ~2,600 sites).
+// setView([latitude, longitude], zoom) centres the map on Montréal.
+const map = L.map('map', { preferCanvas: true }).setView([45.51, -73.58], 12);
 
-// Background street picture from OpenStreetMap (small square "tiles").
+// The background is a grid of small picture "tiles" downloaded from a tile service.
+// Any service works if you keep its credit line (attribution).
+// CartoDB "Positron" is light grey, so your own dots stand out (cleaner look).
+// {z}/{x}/{y} are filled in by Leaflet depending on zoom and position;
+// {r} asks for sharper tiles on high-resolution screens.
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
-// A container for the green lines and dots. We can empty it in one go.
-const highlightLayer = L.layerGroup().addTo(map);
+// A layer group is a container of map objects that can be emptied in one go.
+// We keep three, so each kind of object can be cleared without touching the others.
+const schoolLayer = L.layerGroup().addTo(map);  // school circles that are ticked in the filter
+const lineLayer = L.layerGroup().addTo(map);    // green dashed lines and dots for the nearest sites of a clicked school
+const searchLayer = L.layerGroup().addTo(map);  // the one place the reader found with the search
 
 
-// ---------- 2. Helper: fetch a file and turn it into a JavaScript object ----------
+// ---------- 2. Small helper functions ----------
+// Downloads a file and turns its text into a JavaScript object.
+// fetch() does not answer instantly, it returns a "promise" that the answer will
+// arrive later; .then() says what to do once it has.
 function loadJson(path) {
   return fetch(path).then(function (response) {
-    // response.ok is false for errors like 404 (file not found)
+    // response.ok is false for errors such as 404 (file not found).
+    // "throw" jumps straight to the .catch() at the end of section 3.
     if (!response.ok) { throw new Error('HTTP ' + response.status + ' loading ' + path); }
-    return response.json(); // convert the file text into a JavaScript object
+    return response.json(); // convert the file's text into a JavaScript object
   });
 }
 
-
-// ---------- 3. Helpers ----------
-// Find the n closest recreation sites to a point, with distances in metres.
-function findNearest(schoolLatLng, recreationList, n) {
-  return recreationList
-    .map(function (site) {                       // .map: build a new list with a distance added
-      return {
-        props: site.props,
-        latlng: site.latlng,
-        dist: map.distance(schoolLatLng, site.latlng) // straight-line distance in metres
-      };
-    })
-    .sort(function (a, b) { return a.dist - b.dist; }) // smallest distance first
-    .slice(0, n);                                      // keep only the first n
-}
-
-// Turn a list with repeats into a sorted list without repeats.
-function unique(list) {
-  return Array.from(new Set(list)).sort();
-}
+// Takes a list that may repeat values, returns it sorted and without repeats.
+// A Set is a collection that cannot hold the same value twice.
+const unique = list => Array.from(new Set(list)).sort();
 
 
-// ---------- 4. Load BOTH files, then build everything that needs them ----------
-// Promise.all waits until both downloads are finished.
-Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE)])
-  .then(function (results) {
-    const schools = results[0];
-    const recreation = results[1];
+// ---------- 3. Load both files, then build everything ----------
+// Promise.all waits until BOTH downloads are finished. The code inside .then()
+// only runs after that, so it can safely use the data.
+Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE)]).then(function (res) {
+  const schools = res[0]; // the schools GeoJSON (a FeatureCollection)
 
-    // --- 4a. Recreation sites as a simple list: properties + [lat, lon] ---
-    // GeoJSON stores [longitude, latitude]; Leaflet wants [latitude, longitude].
-    const recreationList = recreation.features.map(function (f) {
-      return { props: f.properties, latlng: L.GeoJSON.coordsToLatLng(f.geometry.coordinates) };
+  // Recreation sites as a simple list of { props: properties, latlng: position }.
+  // GeoJSON stores [longitude, latitude]; Leaflet wants [latitude, longitude].
+  // L.GeoJSON.coordsToLatLng swaps them for us.
+  const recs = res[1].features.map(function (f) {
+    return { props: f.properties, latlng: L.GeoJSON.coordsToLatLng(f.geometry.coordinates) };
+  });
+
+  // --- 3a. What the reader has chosen ---
+  // These start EMPTY, so nothing is drawn: this is why the map is empty by default.
+  // Ticking a checkbox adds its value to the set; unticking removes it.
+  const shownOrdre = new Set(); // ticked school types (ORDRE_ENS values)
+  const shownTypes = new Set(); // ticked recreation types (TYPE values)
+  let maxDist = 1000;           // maximum distance in metres, changed by the slider ("let" = can change)
+
+  // Only the recreation sites whose TYPE is currently ticked.
+  const activeRec = () => recs.filter(r => shownTypes.has(r.props.TYPE));
+
+  // --- 3b. The nearest ticked recreation sites to a point ---
+  // Steps: add a distance to each ticked site -> keep those within maxDist ->
+  // sort smallest distance first -> keep the first HOW_MANY.
+  function findNearest(latlng) {
+    return activeRec()
+      .map(r => ({ props: r.props, latlng: r.latlng, dist: map.distance(latlng, r.latlng) })) // metres
+      .filter(r => r.dist <= maxDist)
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, HOW_MANY);
+  }
+
+  // --- 3c. The text inside a school's popup ---
+  // Both error messages (red) appear here, right where the reader is looking.
+  function schoolPopup(latlng, s) {
+    let body; // will hold the HTML for the list or for an error message
+    if (shownTypes.size === 0) {
+      // Error 1: no recreation type is ticked, so there is nothing to compare with.
+      body = '<p class="err">Tick at least one recreation type in the filter.</p>';
+    } else {
+      const near = findNearest(latlng);
+      body = near.length
+        // Normal case: a numbered list with names, types and distances
+        ? '<ol>' + near.map(r => '<li>' + r.props.NOM + ' (' + r.props.TYPE + '), ' +
+            Math.round(r.dist) + ' m</li>').join('') + '</ol>'
+        // Error 2: ticked sites exist but none is within the chosen distance.
+        : '<p class="err">No ticked recreation site within ' + maxDist +
+          ' m. Increase the distance in the filter.</p>';
+    }
+    return '<strong>' + s.NOM_IMM + '</strong><br>' + s.ORDRE_ENS +
+           '<br><br>Closest recreation:' + body;
+  }
+
+  // --- 3d. UPDATE: draw the green dashed lines from a school to its nearest sites ---
+  function drawLines(latlng) {
+    lineLayer.clearLayers(); // a new answer replaces the old one
+    findNearest(latlng).forEach(function (r) {
+      L.polyline([latlng, r.latlng], { color: '#2a9d4b', weight: 2, dashArray: '4' }).addTo(lineLayer);
+      // A green dot on each of the nearest sites (only these few, only after a click)
+      L.circleMarker(r.latlng, { radius: 5, color: '#2a9d4b', fillOpacity: 1 }).addTo(lineLayer);
+    });
+  }
+
+  // --- 3e. Make one school circle with its popup ---
+  // Used by BOTH the filter (redraw) and the search (showSchool), so the two behave the same.
+  function schoolMarker(feature) {
+    const latlng = L.GeoJSON.coordsToLatLng(feature.geometry.coordinates);
+    const m = L.circleMarker(latlng, { radius: 6, color: '#1d4e89', fillOpacity: 0.8 }); // blue circle
+    // The popup content is a function, so it is built only when clicked
+    // and always uses the CURRENT filter and distance.
+    m.bindPopup(() => schoolPopup(latlng, feature.properties));
+    // EVENT: click on the school. HANDLER: draw its lines.
+    m.on('click', () => drawLines(latlng));
+    return m;
+  }
+
+  // --- 3f. UPDATE: redraw everything that is ticked ---
+  // Called at the start and after every tick or untick.
+  function redraw() {
+    schoolLayer.clearLayers(); lineLayer.clearLayers(); // empty the map
+    let n = 0; // counts the schools drawn
+
+    schools.features.forEach(function (f) {
+      // Draw this school only if its school type is ticked.
+      if (shownOrdre.has(f.properties.ORDRE_ENS)) {
+        schoolLayer.addLayer(schoolMarker(f));
+        n++;
+      }
     });
 
-    // --- 4b. What is currently ticked ---
-    // A Set holds each value only once. They start with EVERY value = everything ticked.
-    const shownOrdre = new Set(schools.features.map(function (f) { return f.properties.ORDRE_ENS; }));
-    const shownTypes = new Set(recreationList.map(function (r) { return r.props.TYPE; }));
+    // Status line under the page title.
+    // Recreation sites are NOT drawn here: they only appear when a school is clicked.
+    document.getElementById('status').textContent = (n === 0)
+      ? 'The map is empty: use the filter (☰) to show schools, or the search (🔍).'
+      : n + ' of ' + schools.features.length + ' schools shown. Click a school to see its closest recreation.';
+  }
 
-    // Container for the school circles, so we can clear and redraw them.
-    const schoolLayer = L.layerGroup().addTo(map);
+  // When a popup closes, remove the green lines so they do not stay behind.
+  map.on('popupclose', () => lineLayer.clearLayers());
 
-    // Only the recreation sites whose TYPE is currently ticked.
-    // This is what makes the filter more than "hide/show": "nearest" changes with it.
-    function activeRecreation() {
-      return recreationList.filter(function (r) { return shownTypes.has(r.props.TYPE); });
-    }
+  // --- 3g. The filter checkboxes ---
+  // Builds one checkbox per value found in the data (so names always match the data).
+  //   boxId : the <div> in index.html to fill
+  //   values: the options, e.g. every school type
+  //   set   : the Set from 3a that remembers what is ticked
+  function buildChecks(boxId, values, set) {
+    const box = document.getElementById(boxId);
+    values.forEach(function (v) {
+      const label = document.createElement('label'); // create <label>
+      const cb = document.createElement('input');    // create <input>
+      cb.type = 'checkbox';                          // not ticked: the map starts empty
 
-    // --- 4c. UPDATE: draw dashed lines and dots to the nearest ticked sites ---
-    function showNearest(marker) {
-      highlightLayer.clearLayers(); // Test 2: remove the previous school's lines first
-      findNearest(marker.getLatLng(), activeRecreation(), HOW_MANY).forEach(function (r) {
-        L.polyline([marker.getLatLng(), r.latlng], { color: '#2a9d4b', weight: 2, dashArray: '4' })
-          .addTo(highlightLayer);
-        L.circleMarker(r.latlng, { radius: 5, color: '#2a9d4b', fillOpacity: 1 })
-          .addTo(highlightLayer);
+      // EVENT: the reader ticks or unticks the box.
+      // HANDLER: update the set. UPDATE: redraw the map.
+      cb.addEventListener('change', function () {
+        if (cb.checked) { set.add(v); } else { set.delete(v); }
+        redraw();
       });
-    }
 
-    // --- 4d. Draw (or redraw) only the schools whose type is ticked ---
-    function drawSchools() {
-      schoolLayer.clearLayers();
-      highlightLayer.clearLayers();
-      let count = 0; // how many schools get drawn
+      label.append(cb, ' ' + v); // box, then its text, inside the label
+      box.appendChild(label);    // label goes into the panel
+    });
+  }
+  buildChecks('ordre-checks', unique(schools.features.map(f => f.properties.ORDRE_ENS)), shownOrdre);
+  buildChecks('type-checks', unique(recs.map(r => r.props.TYPE)), shownTypes);
 
-      const layer = L.geoJSON(schools, {
-        // filter: asked for every school. true = draw it, false = skip it.
-        filter: function (feature) {
-          return shownOrdre.has(feature.properties.ORDRE_ENS);
-        },
-        // What a point looks like: a blue circle.
-        pointToLayer: function (feature, latlng) {
-          return L.circleMarker(latlng, { radius: 6, color: '#1d4e89', fillOpacity: 0.8 });
-        },
-        // Runs once for each school that was drawn.
-        onEachFeature: function (feature, marker) {
-          const s = feature.properties;
-          count++;
-
-          // The popup is built only when clicked, so it always uses the CURRENT filter.
-          marker.bindPopup(function () {
-            const nearest = findNearest(marker.getLatLng(), activeRecreation(), HOW_MANY);
-            const items = nearest.map(function (r) {
-              return '<li>' + r.props.NOM + ' (' + r.props.TYPE + '), ' + Math.round(r.dist) + ' m</li>';
-            }).join('')
-              // Test 3 (edge case): if nothing is ticked the list is empty, so say so.
-              // "||" means "or use this instead".
-              || '<li>No recreation type is ticked in the filter.</li>';
-
-            return '<strong>' + s.NOM_IMM + '</strong><br>' + s.ORDRE_ENS +
-                   '<br><br>Closest recreation:<ol>' + items + '</ol>';
-          });
-
-          // EVENT: click on this school. HANDLER: showNearest.
-          marker.on('click', function () { showNearest(marker); });
-        }
-      });
-      schoolLayer.addLayer(layer);
-
-      // Status line, e.g. "55 of 348 schools shown" (Test 4)
-      document.getElementById('status').textContent =
-        count + ' of ' + schools.features.length + ' schools shown';
-    }
-
-    // When a popup closes, clear the green lines so they do not stay behind.
-    map.on('popupclose', function () { highlightLayer.clearLayers(); });
-
-    // --- 4e. Build the checkboxes from the values found in the data ---
-    // containerId: the <div> to fill; values: the options; selectedSet: the Set from 4b.
-    function buildChecks(containerId, values, selectedSet) {
-      const box = document.getElementById(containerId);
-      values.forEach(function (v) {
-        const label = document.createElement('label');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.checked = true; // everything starts ticked
-
-        // EVENT: the reader ticks or unticks this box.
-        // HANDLER: update the Set, then redraw. UPDATE: circles and status change.
-        cb.addEventListener('change', function () {
-          if (cb.checked) { selectedSet.add(v); } else { selectedSet.delete(v); }
-          drawSchools();
-        });
-
-        label.appendChild(cb);
-        label.appendChild(document.createTextNode(' ' + v));
-        box.appendChild(label);
-      });
-    }
-
-    buildChecks('ordre-checks',
-      unique(schools.features.map(function (f) { return f.properties.ORDRE_ENS; })),
-      shownOrdre);
-    buildChecks('type-checks',
-      unique(recreationList.map(function (r) { return r.props.TYPE; })),
-      shownTypes);
-
-    // --- 4f. First drawing ---
-    drawSchools();
-  })
-  // Runs if ANYTHING above failed. The reader sees a sentence; you see the cause in F12.
-  .catch(function (err) {
-    document.getElementById('status').textContent =
-      'Could not load the data. Open the console (F12) for details.';
-    console.error(err);
+  // --- 3h. The distance slider ---
+  // EVENT: the reader moves the slider. HANDLER: the function below.
+  document.getElementById('dist-range').addEventListener('input', function (e) {
+    maxDist = Number(e.target.value); // slider values are text, Number() makes it a number
+    document.getElementById('dist-label').textContent = maxDist; // UPDATE: show the value
+    map.closePopup(); // UPDATE: the open popup would still show the old distance
   });
 
+  // --- 3i. The search ---
+  const input = document.getElementById('search-input');  // the text box
+  const msg = document.getElementById('search-msg');      // red message line under it
+  const list = document.getElementById('search-results'); // list of matches to click
 
-// ---------- 5. The filter icon: open and close the panel ----------
-// EVENT: click on the icon. HANDLER: the function below. UPDATE: panel shown or hidden.
-document.getElementById('btn-filter').addEventListener('click', function () {
-  const panel = document.getElementById('panel-filter');
-  panel.hidden = !panel.hidden; // "!" flips true <-> false
+  // UPDATE for a school found by search: zoom, open its popup, draw its lines.
+  function showSchool(f) {
+    searchLayer.clearLayers();                 // only one search result at a time
+    const m = schoolMarker(f).addTo(searchLayer);
+    map.setView(m.getLatLng(), 16);            // zoom in on it
+    m.openPopup();
+    drawLines(m.getLatLng());
+  }
+
+  // UPDATE for a recreation site found by search: zoom and open its popup.
+  function showRec(r) {
+    searchLayer.clearLayers();
+    const m = L.circleMarker(r.latlng, { radius: 7, color: '#2a9d4b', fillOpacity: 1 })
+      .bindPopup('<strong>' + r.props.NOM + '</strong><br>' + r.props.TYPE + '<br>' + r.props.ARROND)
+      .addTo(searchLayer);
+    map.setView(r.latlng, 16);
+    m.openPopup();
+  }
+
+  // HANDLER: runs when the reader presses Search or Enter.
+  function doSearch() {
+    const text = input.value.trim();  // what was typed, without extra spaces
+    const q = text.toLowerCase();     // lowercase, so capital letters do not matter
+    list.innerHTML = '';              // clear the previous list...
+    msg.textContent = '';             // ...and the previous message
+
+    // Edge case: nothing typed
+    if (!q) { msg.textContent = 'Type a school or recreation site name first.'; return; }
+
+    // Collect every school and recreation site whose name CONTAINS the typed text.
+    // "|| ''" protects against a missing name. Each hit has a label and a "go" function.
+    const hits = [];
+    schools.features.forEach(function (f) {
+      if ((f.properties.NOM_IMM || '').toLowerCase().includes(q)) {
+        hits.push({ label: f.properties.NOM_IMM + ' (school)', go: () => showSchool(f) });
+      }
+    });
+    recs.forEach(function (r) {
+      if ((r.props.NOM || '').toLowerCase().includes(q)) {
+        hits.push({ label: r.props.NOM + ' (' + r.props.ARROND + ')', go: () => showRec(r) });
+      }
+    });
+
+    // Error: a wrong name. The red message appears right under the search bar.
+    if (hits.length === 0) {
+      msg.textContent = 'No school or recreation site matches "' + text + '". Check the spelling.';
+      return;
+    }
+    // Exactly one match: go straight to it.
+    if (hits.length === 1) { hits[0].go(); return; }
+
+    // Several matches: show up to 8 as buttons the reader can click.
+    if (hits.length > 8) { msg.textContent = hits.length + ' matches, showing 8. Type more of the name.'; }
+    hits.slice(0, 8).forEach(function (h) {
+      const b = document.createElement('button');
+      b.textContent = h.label;
+      // EVENT: click on a match. HANDLER: empty the list, then show that place.
+      b.addEventListener('click', function () { list.innerHTML = ''; h.go(); });
+      list.appendChild(b);
+    });
+  }
+
+  // EVENTS that start a search: clicking Search, or pressing Enter in the text box.
+  document.getElementById('search-go').addEventListener('click', doSearch);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { doSearch(); } });
+
+  // --- 3j. First drawing: nothing is ticked, so this just writes the "map is empty" message ---
+  redraw();
+
+// .catch runs if ANYTHING above failed (a file missing, a typo in a file name...).
+// The reader sees a plain sentence; you see the real cause in the console (F12).
+}).catch(function (err) {
+  document.getElementById('status').textContent =
+    'Could not load the data. Open the console (F12) for details.';
+  console.error(err);
+});
+
+
+// ---------- 4. The three round buttons: open one panel, close the others ----------
+// Each pair is [button id, panel id].
+const PAIRS = [['btn-info', 'panel-info'], ['btn-search', 'panel-search'], ['btn-filter', 'panel-filter']];
+
+PAIRS.forEach(function (pair) {
+  // EVENT: a click on this round button. HANDLER: the function below.
+  document.getElementById(pair[0]).addEventListener('click', function () {
+    // UPDATE: go through all three panels.
+    PAIRS.forEach(function (p) {
+      const panel = document.getElementById(p[1]);
+      // The panel that belongs to the clicked button flips (open <-> closed);
+      // every other panel is forced closed, so only one is open at a time.
+      // "hidden" is an HTML attribute: true = not shown. "!" flips true <-> false.
+      panel.hidden = (p[1] !== pair[1]) ? true : !panel.hidden;
+    });
+  });
 });
