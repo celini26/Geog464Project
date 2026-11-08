@@ -7,12 +7,21 @@
 // =====================================================================
 
 // ---------- 0. Settings ----------
-console.log('script.js version 4');   // check in the console (F12) that the new file is loaded
+console.log('script.js version 6');   // check in the console (F12) that the new file is loaded
 const SCHOOLS_FILE = '../data/schools_json_final.geojson';
 const RECREATION_FILE = '../data/recreation_filtered.geojson';
 const ROUTES_FILE = '../data/walking_routes.geojson';
 const HOW_MANY = 3;                                  // sites listed per school
 const SEASONS = ['winter', 'spring', 'summer', 'fall'];
+// One colour per school type (ORDRE_ENS). Change a colour code here to change it on the map.
+const SCHOOL_COLORS = {
+  'Préscolaire': '#f4a300',
+  'Primaire': '#1d4e89',
+  'Préscolaire - Primaire': '#7b2d8e',
+  'Primaire - Secondaire': '#c2185b',
+  'Préscolaire - Primaire - Secondaire': '#6d4c41'
+};
+const schoolColor = type => SCHOOL_COLORS[type] || '#555555';   // grey if a type is not listed
 
 // ---------- 1. Map and background ----------
 const map = L.map('map', { preferCanvas: true }).setView([45.51, -73.58], 12);
@@ -139,10 +148,24 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
   // --- 3e. One school circle ---
   function schoolMarker(feature) {
     const latlng = L.GeoJSON.coordsToLatLng(feature.geometry.coordinates);
-    const m = L.circleMarker(latlng, { radius: 6, color: '#1d4e89', fillOpacity: 0.8 });
+    const col = schoolColor(feature.properties.ORDRE_ENS);
+    const m = L.circleMarker(latlng, { radius: 6, color: col, fillColor: col, fillOpacity: 0.8 });
     m.bindPopup(() => schoolPopup(feature));
     m.on('click', () => drawLines(feature));
     return m;
+  }
+
+  // --- Legend (bottom right of the map): only the ticked school types ---
+  const legend = document.createElement('div');
+  legend.style.cssText = 'position:absolute;bottom:24px;right:10px;z-index:2000;background:white;' +
+    'padding:8px 10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:13px;display:none;';
+  document.getElementById('layout').appendChild(legend);
+
+  const dot = c => '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:' + c + '"></span>';
+  function updateLegend() {
+    const types = Array.from(shownOrdre).sort();
+    legend.innerHTML = types.map(t => '<div>' + dot(schoolColor(t)) + t + '</div>').join('');
+    legend.style.display = types.length ? 'block' : 'none';
   }
 
   // --- 3f. Redraw: a school stays only if its type is ticked AND it has a match ---
@@ -156,6 +179,7 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
       schoolLayer.addLayer(schoolMarker(f));
       n++;
     });
+    updateLegend();
     document.getElementById('status').textContent = (n === 0)
       ? 'No schools shown: use the filter (☰) to choose school and recreation types, or widen the distance.'
       : n + ' of ' + schools.features.length + ' schools shown. Click a school to see its closest recreation.';
@@ -164,7 +188,7 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
   map.on('popupclose', () => lineLayer.clearLayers());
 
   // --- 3g. Filter checkboxes ---
-  function buildChecks(boxId, values, set) {
+  function buildChecks(boxId, values, set, colorOf) {
     const box = document.getElementById(boxId);
     values.forEach(function (v) {
       const label = document.createElement('label');
@@ -174,11 +198,17 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
         if (cb.checked) { set.add(v); } else { set.delete(v); }
         redraw();
       });
-      label.append(cb, ' ' + v);
+      label.append(cb, ' ');
+      if (colorOf) {
+        const sw = document.createElement('span');
+        sw.style.cssText = 'display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;background:' + colorOf(v);
+        label.append(sw);
+      }
+      label.append(v);
       box.appendChild(label);
     });
   }
-  buildChecks('ordre-checks', unique(schools.features.map(f => f.properties.ORDRE_ENS)), shownOrdre);
+  buildChecks('ordre-checks', unique(schools.features.map(f => f.properties.ORDRE_ENS)), shownOrdre, schoolColor);
   buildChecks('type-checks', unique(recs.map(r => r.props.TYPE)), shownTypes);
   buildChecks('season-checks', SEASONS, shownSeasons);
 
@@ -196,11 +226,17 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
 
   function showSchool(f) {
     searchLayer.clearLayers();
-    const m = schoolMarker(f).addTo(searchLayer);
-    map.setView(m.getLatLng(), 16);
-    m.openPopup();
-    drawLines(f);
+    map.closePopup();
+    const latlng = L.GeoJSON.coordsToLatLng(f.geometry.coordinates);
+    map.setView(latlng, 16);
+    // Only a popup, no marker: when the X is pressed, nothing is left on the map.
+    L.popup({ offset: [0, -2] })
+      .setLatLng(latlng)
+      .setContent(schoolPopup(f))
+      .openOn(map);
+    drawLines(f);   // the walking routes disappear with the popup (see the popupclose handler)
   }
+
   function showRec(r) {
     searchLayer.clearLayers();
     map.closePopup();
