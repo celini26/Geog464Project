@@ -1,12 +1,11 @@
-// =====================================================================
-// script.js (version 3)
-// New: walking routes, season filter, age groups, schools without matches
+
+// Newly added for A3: walking routes, season filter, age groups, schools without matches
 // disappear, search with accents / typos / suggestions.
 // Needs: schools_json_final.geojson (with school_id), recreation_filtered.geojson
 // (with rec_id, seasons, season_note, age_levels) and walking_routes.geojson.
 // =====================================================================
 
-// ---------- 0. Settings ----------
+// ---------- Settings ( data) ----------
 const SCHOOLS_FILE = '../data/schools_json_final.geojson';
 const RECREATION_FILE = '../data/recreation_filtered.geojson';
 const ROUTES_FILE = '../data/walking_routes.geojson';
