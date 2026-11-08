@@ -1,21 +1,4 @@
-// =====================================================================
-// script.js (version 2): empty map by default, three round buttons
-// (info, search, filter), a distance slider and error messages.
-// Replaces your whole site/script.js.
-// =====================================================================
-//
-// VOCABULARY (useful in class)
-//   EVENT   = something the reader does: a click, ticking a box, moving the slider, pressing Enter
-//   HANDLER = the function that runs when that event happens
-//   UPDATE  = what the page changes as a result: circles redrawn, a popup opened, a message shown
-//
-// ORGANISATION
-//   0. Settings                       3. Load the data, then build everything
-//   1. Map and background             4. The three round buttons
-//   2. Small helper functions
-//
-// SYNTAX NOTE: "x => y" is a short way of writing "function (x) { return y; }".
-// =====================================================================
+
 
 
 // ---------- 0. Settings ----------
@@ -282,7 +265,7 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE)]).then(function (
 // The reader sees a plain sentence; you see the real cause in the console (F12).
 }).catch(function (err) {
   document.getElementById('status').textContent =
-    'Could not load the data. Open the console (F12) for details.';
+    'No data was able to be depicted, please refrech the website and check your internet connection.  ';
   console.error(err);
 });
 
