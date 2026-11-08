@@ -23,6 +23,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 const schoolLayer = L.layerGroup().addTo(map);   // school circles
 const lineLayer = L.layerGroup().addTo(map);     // walking routes of the clicked school
 const searchLayer = L.layerGroup().addTo(map);   // the place found with the search
+const searchSvg = L.svg();                       // draws the searched site as plain SVG, so it vanishes cleanly when removed
 
 // ---------- 2. Helper functions ----------
 function loadJson(path) {
@@ -159,7 +160,15 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
       ? 'No schools shown: use the filter (☰) to choose school and recreation types, or widen the distance.'
       : n + ' of ' + schools.features.length + ' schools shown. Click a school to see its closest recreation.';
   }
-  map.on('popupclose', () => lineLayer.clearLayers());
+  // When a popup closes: remove the green lines, and remove a searched recreation site
+  let searchedMarker = null;   // the recreation site currently shown by the search
+  map.on('popupclose', function (e) {
+    lineLayer.clearLayers();
+    if (searchedMarker && e.popup === searchedMarker.getPopup()) {
+      searchLayer.removeLayer(searchedMarker);
+      searchedMarker = null;
+    }
+  });
 
   // --- 3g. Filter checkboxes ---
   function buildChecks(boxId, values, set) {
@@ -201,10 +210,11 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
   }
   function showRec(r) {
     searchLayer.clearLayers();
-    const m = L.circleMarker(r.latlng, { radius: 7, color: '#2a9d4b', fillOpacity: 1 })
+    const m = L.circleMarker(r.latlng, { radius: 7, color: '#2a9d4b', fillOpacity: 1, renderer: searchSvg })
       .bindPopup('<strong>' + r.props.NOM + '</strong><br>' + r.props.TYPE + '<br>' + r.props.ARROND +
                  (r.props.season_note ? '<br><em>' + r.props.season_note + '</em>' : ''))
       .addTo(searchLayer);
+    searchedMarker = m;   // removed by the popupclose handler above
     map.setView(r.latlng, 16);
     m.openPopup();
   }
