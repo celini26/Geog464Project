@@ -1,11 +1,12 @@
-
-// Newly added for A3: walking routes, season filter, age groups, schools without matches
+// =====================================================================
+// script.js (version 3)
+// New: walking routes, season filter, age groups, schools without matches
 // disappear, search with accents / typos / suggestions.
 // Needs: schools_json_final.geojson (with school_id), recreation_filtered.geojson
 // (with rec_id, seasons, season_note, age_levels) and walking_routes.geojson.
 // =====================================================================
 
-// ---------- Settings ( data) ----------
+// ---------- 0. Settings ----------
 const SCHOOLS_FILE = '../data/schools_json_final.geojson';
 const RECREATION_FILE = '../data/recreation_filtered.geojson';
 const ROUTES_FILE = '../data/walking_routes.geojson';
@@ -119,12 +120,10 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
     } else {
       const near = findNearest(feature);
       body = near.length
-        ? '<ol>' + near.map(r => '<li>' + r.rec.props.NOM + ' (' + r.rec.props.TYPE + '), ' +
-            r.walk_m + ' m walk<br><em>' + r.rec.props.season_note + '</em></li>').join('') + '</ol>'
-        : '<p class="err">No matching site within ' + maxDist + ' m walking.</p>';
+        ? '<ol>' + near.map(r => '<li>' + r.rec.props.NOM + ', ' + r.walk_m + ' m</li>').join('') + '</ol>'
+        : '<p class="err">No matching site within ' + maxDist + ' m.</p>';
     }
-    return '<strong>' + s.NOM_IMM + '</strong><br>' + s.ORDRE_ENS +
-           '<br><br>Closest recreation:' + body;
+    return '<strong>' + s.NOM_IMM + '</strong>' + body;
   }
 
   // --- 3d. Draw the walking routes (green dashed) ---
@@ -204,7 +203,7 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
     searchLayer.clearLayers();
     const m = L.circleMarker(r.latlng, { radius: 7, color: '#2a9d4b', fillOpacity: 1 })
       .bindPopup('<strong>' + r.props.NOM + '</strong><br>' + r.props.TYPE + '<br>' + r.props.ARROND +
-                 '<br><em>' + r.props.season_note + '</em>')
+                 (r.props.season_note ? '<br><em>' + r.props.season_note + '</em>' : ''))
       .addTo(searchLayer);
     map.setView(r.latlng, 16);
     m.openPopup();
