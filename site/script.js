@@ -7,7 +7,7 @@
 // =====================================================================
 
 // ---------- 0. Settings ----------
-console.log('script.js version 8');   // check in the console (F12) that the new file is loaded
+console.log('script.js version 10');   // check in the console (F12) that the new file is loaded
 const SCHOOLS_FILE = '../data/schools_json_final.geojson';
 const RECREATION_FILE = '../data/recreation_filtered.geojson';
 const ROUTES_FILE = '../data/walking_routes.geojson';
@@ -136,15 +136,25 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
     return '<strong>' + s.NOM_IMM + '</strong>' + body;
   }
 
-  // --- 3d. Draw the walking routes (green dashed) ---
-  // The popup that is currently open (set by the popupopen event below)
-  let openPopup = null;
-  map.on('popupopen', e => { openPopup = e.popup; });
+  // --- 3d. Draw the green dashed walking routes of a school; returns the sites found ---
+  function drawLines(feature) {
+    lineLayer.clearLayers();
+    const near = findNearest(feature);
+    near.forEach(function (r) {
+      L.polyline(r.latlngs, { color: '#2a9d4b', weight: 3, dashArray: '4' }).addTo(lineLayer);
+      L.circleMarker(r.rec.latlng, { radius: 5, color: '#2a9d4b', fillOpacity: 1 }).addTo(lineLayer);
+    });
+    return near;
+  }
 
-  // Where to put a popup of size W x H so that it covers as few route points as possible.
-  // pts = points along the routes, in pixels, relative to the popup's anchor point.
-  // The popup covers x from o[0] - W/2 to o[0] + W/2 and y from o[1] - H to o[1].
-  function choosePlacement(pts, W, H) {
+  // --- Popup placement ---
+  // Tries 8 spots around the school (above, below, left, right and the 4 corners) and
+  // takes the one that covers the fewest route points and stays on the screen.
+  //   pts  = points along the routes, in pixels, relative to the school
+  //   W, H = size of the popup in pixels
+  //   view = where the school is on the screen and how big the map is: {x, y, w, h}
+  // The popup then covers x from o[0] - W/2 to o[0] + W/2 and y from o[1] - H to o[1].
+  function choosePlacement(pts, W, H, view) {
     const base = 7, gap = 14, margin = 6;            // 7 = Leaflet's normal popup offset
     const options = [
       { name: 'above',       o: [0, base] },                      // the normal spot
@@ -156,48 +166,56 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
       { name: 'below-right', o: [W / 2 + gap, gap + H] },
       { name: 'below-left',  o: [-(W / 2 + gap), gap + H] }
     ];
-    let best = 0, bestCount = Infinity;
+    let best = 0, bestScore = Infinity, bestCount = 0;
     options.forEach(function (opt, i) {
       const o = opt.o;
-      const count = pts.filter(p => Math.hypot(p.x, p.y) > 15 &&   // ignore the start of a route, right at the point
+      const count = pts.filter(p => Math.hypot(p.x, p.y) > 15 &&   // ignore the start of a route, right at the school
                                     p.x > o[0] - W / 2 - margin && p.x < o[0] + W / 2 + margin &&
                                     p.y > o[1] - H - margin && p.y < o[1] + margin).length;
-      if (count < bestCount) { best = i; bestCount = count; }
+      const left = view.x + o[0] - W / 2, top = view.y + o[1] - H;
+      const outside = left < 5 || left + W > view.w - 5 || top < 5 || top + H > view.h - 5;
+      const score = count + (outside ? 1000 : 0);                // a spot off the screen is a last resort
+      if (score < bestScore) { best = i; bestScore = score; bestCount = count; }
     });
     return { offset: options[best].o, moved: best !== 0, name: options[best].name, covered: bestCount };
   }
 
-  // Move the open popup away from the green routes
-  function movePopupAway(routes) {
-    const popup = openPopup;
-    if (!popup || !popup.isOpen() || !popup.getElement()) { return; }
-    const el = popup.getElement();
-    const anchor = map.latLngToLayerPoint(popup.getLatLng());
-    const pts = [];
-    routes.forEach(function (r) {               // points every ~8 pixels along each route
-      for (let i = 1; i < r.latlngs.length; i++) {
-        const a = map.latLngToLayerPoint(r.latlngs[i - 1]).subtract(anchor);
-        const b = map.latLngToLayerPoint(r.latlngs[i]).subtract(anchor);
-        const n = Math.max(1, Math.ceil(a.distanceTo(b) / 8));
-        for (let k = 0; k <= n; k++) { pts.push(a.add(b.subtract(a).multiplyBy(k / n))); }
-      }
-    });
-    const choice = choosePlacement(pts, el.offsetWidth, el.offsetHeight);
-    console.log('popup placed', choice.name, '- route points covered:', choice.covered, 'of', pts.length);
-    popup.options.offset = L.point(choice.offset[0], choice.offset[1]);
-    popup.update();
-    const tip = el.querySelector('.leaflet-popup-tip-container');
-    if (tip) { tip.style.display = choice.moved ? 'none' : ''; }   // the little arrow would point the wrong way
+  // Measure the open popup, choose its spot and move it there
+  function placePopup(popup, routes) {
+    try {
+      const el = popup.getElement();
+      const anchor = map.latLngToLayerPoint(popup.getLatLng());
+      const pts = [];
+      routes.forEach(function (r) {               // a point every ~8 pixels along each route
+        for (let i = 1; i < r.latlngs.length; i++) {
+          const a = map.latLngToLayerPoint(r.latlngs[i - 1]).subtract(anchor);
+          const b = map.latLngToLayerPoint(r.latlngs[i]).subtract(anchor);
+          const n = Math.max(1, Math.ceil(a.distanceTo(b) / 8));
+          for (let k = 0; k <= n; k++) { pts.push(a.add(b.subtract(a).multiplyBy(k / n))); }
+        }
+      });
+      const c = map.latLngToContainerPoint(popup.getLatLng()), size = map.getSize();
+      const choice = choosePlacement(pts, el.offsetWidth, el.offsetHeight, { x: c.x, y: c.y, w: size.x, h: size.y });
+      console.log('popup placed', choice.name, '- route points covered:', choice.covered, 'of', pts.length);
+      popup.options.offset = L.point(choice.offset[0], choice.offset[1]);
+      popup.options.autoPan = true;               // now keep it fully on the screen
+      popup.update();
+      const tip = el.querySelector('.leaflet-popup-tip-container');
+      if (tip) { tip.style.display = choice.moved ? 'none' : ''; }   // the little arrow would point the wrong way
+    } catch (err) {
+      console.error('Could not place the popup', err);
+    }
   }
 
-  function drawLines(feature) {
-    lineLayer.clearLayers();
-    const near = findNearest(feature);
-    near.forEach(function (r) {
-      L.polyline(r.latlngs, { color: '#2a9d4b', weight: 3, dashArray: '4' }).addTo(lineLayer);
-      L.circleMarker(r.rec.latlng, { radius: 5, color: '#2a9d4b', fillOpacity: 1 }).addTo(lineLayer);
-    });
-    movePopupAway(near);   // keep the popup from hiding the routes
+  // Open a school's popup: draw its routes first, then place the popup away from them
+  function openSchoolPopup(feature, latlng) {
+    map.closePopup();                              // closes the old popup (and its routes)
+    const near = drawLines(feature);
+    const popup = L.popup({ autoPan: false, offset: [0, 7] })
+      .setLatLng(latlng)
+      .setContent(schoolPopup(feature));
+    popup.openOn(map);
+    placePopup(popup, near);
   }
 
   // --- 3e. One school circle ---
@@ -205,8 +223,7 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
     const latlng = L.GeoJSON.coordsToLatLng(feature.geometry.coordinates);
     const col = schoolColor(feature.properties.ORDRE_ENS);
     const m = L.circleMarker(latlng, { radius: 6, color: col, fillColor: col, fillOpacity: 0.8 });
-    m.bindPopup(() => schoolPopup(feature));
-    m.on('click', () => drawLines(feature));
+    m.on('click', () => openSchoolPopup(feature, latlng));
     return m;
   }
 
@@ -281,15 +298,9 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
 
   function showSchool(f) {
     searchLayer.clearLayers();
-    map.closePopup();
     const latlng = L.GeoJSON.coordsToLatLng(f.geometry.coordinates);
-    map.setView(latlng, 16);
-    // Only a popup, no marker: when the X is pressed, nothing is left on the map.
-    L.popup({ offset: [0, -2] })
-      .setLatLng(latlng)
-      .setContent(schoolPopup(f))
-      .openOn(map);
-    drawLines(f);   // the walking routes disappear with the popup (see the popupclose handler)
+    map.setView(latlng, 16, { animate: false });   // no animation, so the popup is placed on the final view
+    openSchoolPopup(f, latlng);
   }
 
   function showRec(r) {
