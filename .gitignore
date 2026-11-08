@@ -1,0 +1,4 @@
+data/walk_network.graphml
+notebook/cache/
+.ipynb_checkpoints/
+__pycache__/
