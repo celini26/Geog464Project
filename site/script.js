@@ -7,7 +7,7 @@
 // =====================================================================
 
 // ---------- 0. Settings ----------
-console.log('script.js version 7');   // check in the console (F12) that the new file is loaded
+console.log('script.js version 8');   // check in the console (F12) that the new file is loaded
 const SCHOOLS_FILE = '../data/schools_json_final.geojson';
 const RECREATION_FILE = '../data/recreation_filtered.geojson';
 const ROUTES_FILE = '../data/walking_routes.geojson';
@@ -143,24 +143,28 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
 
   // Where to put a popup of size W x H so that it covers as few route points as possible.
   // pts = points along the routes, in pixels, relative to the popup's anchor point.
-  // Returns the popup offset [x, y] and whether it was moved away from the normal spot.
+  // The popup covers x from o[0] - W/2 to o[0] + W/2 and y from o[1] - H to o[1].
   function choosePlacement(pts, W, H) {
     const base = 7, gap = 14, margin = 6;            // 7 = Leaflet's normal popup offset
     const options = [
-      [0, base],                    // 0. above the point (the normal spot)
-      [W / 2 + gap, base + H / 2],  // 1. to the right
-      [-(W / 2 + gap), base + H / 2], // 2. to the left
-      [0, base + H + gap]           // 3. below the point
+      { name: 'above',       o: [0, base] },                      // the normal spot
+      { name: 'below',       o: [0, base + H + gap] },
+      { name: 'right',       o: [W / 2 + gap, base + H / 2] },
+      { name: 'left',        o: [-(W / 2 + gap), base + H / 2] },
+      { name: 'above-right', o: [W / 2 + gap, -gap] },
+      { name: 'above-left',  o: [-(W / 2 + gap), -gap] },
+      { name: 'below-right', o: [W / 2 + gap, gap + H] },
+      { name: 'below-left',  o: [-(W / 2 + gap), gap + H] }
     ];
     let best = 0, bestCount = Infinity;
-    options.forEach(function (o, i) {
-      // the popup then covers x from o[0] - W/2 to o[0] + W/2 and y from o[1] - H to o[1]
+    options.forEach(function (opt, i) {
+      const o = opt.o;
       const count = pts.filter(p => Math.hypot(p.x, p.y) > 15 &&   // ignore the start of a route, right at the point
                                     p.x > o[0] - W / 2 - margin && p.x < o[0] + W / 2 + margin &&
                                     p.y > o[1] - H - margin && p.y < o[1] + margin).length;
       if (count < bestCount) { best = i; bestCount = count; }
     });
-    return { offset: options[best], moved: best !== 0 };
+    return { offset: options[best].o, moved: best !== 0, name: options[best].name, covered: bestCount };
   }
 
   // Move the open popup away from the green routes
@@ -179,6 +183,7 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
       }
     });
     const choice = choosePlacement(pts, el.offsetWidth, el.offsetHeight);
+    console.log('popup placed', choice.name, '- route points covered:', choice.covered, 'of', pts.length);
     popup.options.offset = L.point(choice.offset[0], choice.offset[1]);
     popup.update();
     const tip = el.querySelector('.leaflet-popup-tip-container');
