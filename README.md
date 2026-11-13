@@ -11,13 +11,13 @@ I will additionally include the green spaces as in my original plan, i will cust
 ## MY DATA FOR THE MVP
 Schools: https://open.canada.ca/data/dataset/2d3b5cf8-b347-49c7-ad3b-bd6a9c15e443/resource/dbf9ddad-a6df-46a2-b50f-b11b5aea9200 
     original title: Location of educational institutions in the school network in Quebec - Public schools
-    
+    licensed under CC-BY 4.0
     Portal: Données Québec and mirrored on the federal Open Government Portal
 filtered: [](data/schools_json_final.geojson)
 What I changed: I extracted only elementary and preschool level schools into my fintered geojson, which were located on the island of montreal. this i confirmed by checking the Postal codes of the schools
 
 Recreational sites: https://donnees.montreal.ca/dataset/installations-recreatives-sportives-et-culturelles/resource/1c239e86-8b36-476c-bd51-91a3cd20f687 
-    original title: 
+    original title: Outdoor recreational, sports and cultural facilities 
     licensed under CC-BY 4.0
     portal: Ville de Montréal
 filtered: [](data/recreation_filtered.geojson)
@@ -59,3 +59,10 @@ Test 3. I search a false name in the search bar.
 | 6. On a phone (size view and my phone) | pass 
 | 7. Mouse in my pocket | pass 
 | 8. Accessibility audit | somewhat pass | change the criteria for the name searching 
+
+## Part 3: what I found, and one fix
+Evidence: Round 2: the user finds the season filter confusing and unrelated to the recreational sites
+Severity: 2
+My change: I will change the seasons into outdoor/indoor
+Recheck: [the same task, given to someone new, with no help.
+ Fixed means: they do it without hesitating at that spot]

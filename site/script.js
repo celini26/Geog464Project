@@ -1,18 +1,18 @@
 // =====================================================================
 // script.js (version 3)
-// New: walking routes, season filter, age groups, schools without matches
+// New: walking routes, indoor/outdoor filter, age groups, schools without matches
 // disappear, search with accents / typos / suggestions.
 // Needs: schools_json_final.geojson (with school_id), recreation_filtered.geojson
-// (with rec_id, seasons, season_note, age_levels) and walking_routes.geojson.
+// (with rec_id, setting, season_note, age_levels) and walking_routes.geojson.
 // =====================================================================
 
 // ---------- 0. Settings ----------
-console.log('script.js version 10');   // check in the console (F12) that the new file is loaded
+console.log('script.js version 11');   // check in the console (F12) that the new file is loaded
 const SCHOOLS_FILE = '../data/schools_json_final.geojson';
 const RECREATION_FILE = '../data/recreation_filtered.geojson';
 const ROUTES_FILE = '../data/walking_routes.geojson';
 const HOW_MANY = 3;                                  // sites listed per school
-const SEASONS = ['winter', 'spring', 'summer', 'fall'];
+const SETTINGS = ['Indoor', 'Outdoor'];   // values of the "setting" column of the recreation file
 // One colour per school type (ORDRE_ENS). Change a colour code here to change it on the map.
 const SCHOOL_COLORS = {
   'Préscolaire': '#f4a300',
@@ -94,7 +94,7 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
   // --- 3a. What the reader has chosen ---
   const shownOrdre = new Set();     // ticked school types
   const shownTypes = new Set();     // ticked recreation types
-  const shownSeasons = new Set();   // ticked seasons (none ticked = any season)
+  const shownSettings = new Set();  // ticked Indoor / Outdoor boxes (none ticked = both)
   const slider = document.getElementById('dist-range');
   let maxDist = Number(slider.value);   // starts at the slider's own value
   document.getElementById('dist-label').textContent = maxDist;
@@ -105,9 +105,9 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
     if (levels === 'all') { return true; }
     return levels.split('|').some(l => (school.ORDRE_ENS || '').includes(l));
   }
-  function seasonOk(rec) {
-    if (shownSeasons.size === 0) { return true; }
-    return (rec.props.seasons || '').split('|').some(s => shownSeasons.has(s));
+  function settingOk(rec) {
+    if (shownSettings.size === 0) { return true; }
+    return shownSettings.has(rec.props.setting);
   }
 
   // --- 3b. The closest matching sites by WALKING distance ---
@@ -116,7 +116,7 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
     return (routesBySchool[school.school_id] || [])
       .map(rt => ({ rec: recById[rt.rec_id], walk_m: rt.walk_m, latlngs: rt.latlngs }))
       .filter(r => r.rec && shownTypes.has(r.rec.props.TYPE) && ageOk(school, r.rec) &&
-                   seasonOk(r.rec) && r.walk_m <= maxDist)
+                   settingOk(r.rec) && r.walk_m <= maxDist)
       .sort((a, b) => a.walk_m - b.walk_m)
       .slice(0, HOW_MANY);
   }
@@ -282,7 +282,7 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
   }
   buildChecks('ordre-checks', unique(schools.features.map(f => f.properties.ORDRE_ENS)), shownOrdre, schoolColor);
   buildChecks('type-checks', unique(recs.map(r => r.props.TYPE)), shownTypes);
-  buildChecks('season-checks', SEASONS, shownSeasons);
+  buildChecks('setting-checks', SETTINGS, shownSettings);
 
   // --- 3h. Distance slider (now walking distance) ---
   slider.addEventListener('input', function (e) {
@@ -311,6 +311,7 @@ Promise.all([loadJson(SCHOOLS_FILE), loadJson(RECREATION_FILE), loadJson(ROUTES_
     L.popup({ offset: [0, -2] })
       .setLatLng(r.latlng)
       .setContent('<strong>' + r.props.NOM + '</strong><br>' + r.props.TYPE + '<br>' + r.props.ARROND +
+                  (r.props.setting ? '<br>' + r.props.setting : '') +
                   (r.props.season_note ? '<br><em>' + r.props.season_note + '</em>' : ''))
       .openOn(map);
   }
