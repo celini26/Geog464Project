@@ -121,4 +121,43 @@ header p { margin: 4px 0 0; font-size: 14px; color: #DCBD23; }
 .err { color: #b00020; margin: 6px 0 0; }
 
 /* Turns the background map grey, without changing your dots or lines */
-.leaflet-tile-pane { filter: grayscale(70%) brightness(1.05); } 
+.leaflet-tile-pane { filter: grayscale(70%) brightness(1.05); }
+
+
+/* ---------- Welcome message shown when the page opens ---------- */
+/* Dark layer over the map and buttons, so nothing can be clicked before Start */
+#backdrop {
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2500;
+}
+#backdrop[hidden] { display: none; }
+
+/* The info panel, centred on the map while it is the welcome message */
+.panel.welcome {
+  top: 50%;
+  left: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(520px, 90%);
+  max-height: 80vh;
+  box-sizing: border-box;
+  padding: 20px 24px;
+  z-index: 3000;
+}
+
+/* The Start button only exists in the welcome version of the panel */
+.panel .start-btn { display: none; }
+.panel.welcome .start-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: #1F2D5A;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+}

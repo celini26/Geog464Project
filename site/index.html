@@ -23,7 +23,11 @@
       <button class="circle" id="btn-filter" title="Filter">☰</button>
     </div>
 
-    <div id="panel-info" class="panel" hidden>
+    <!-- Dark background behind the welcome message; hidden by script.js once the reader clicks Start -->
+    <div id="backdrop"></div>
+
+    <!-- INFO panel: open when the page loads (class "welcome"), so it is read first -->
+    <div id="panel-info" class="panel welcome">
       <h3>About this map</h3>
       <p>Made for young parents and families to find schools with nearby age-appropriate recreation.</p>
       <strong>How to use it</strong>
@@ -31,9 +35,16 @@
       <strong>Good to know</strong>
       <p>Distances are walking distances along streets and paths. Playgrounds for ages 18 months to 5 years only match preschool schools, and playgrounds for ages 5 to 12 only match primary schools. Seasons are estimated from the activity type; actual opening dates vary by borough.</p>
       <strong>Data sources</strong>
-      <p>Schools: [title, publisher, link, licence, date accessed, what you changed].</p>
-      <p>Recreation sites: [title, publisher, link, licence, date accessed, what you changed].</p>
+            <p><strong>Schools:</strong> “Location of educational institutions in the school network in Quebec - Public schools”, Ministère de l’Éducation du Québec, via Données Québec and the federal Open Government Portal.
+        <a href="https://open.canada.ca/data/dataset/2d3b5cf8-b347-49c7-ad3b-bd6a9c15e443/resource/dbf9ddad-a6df-46a2-b50f-b11b5aea9200" target="_blank" rel="noopener">Link to the data</a>.
+        Licence: <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. 
+        Changes: kept only the schools on the island of Montréal that offer preschool or primary education, removed duplicates and unused columns, and added an ID to each school.</p>
+      <p><strong>Recreation sites:</strong> “Outdoor recreational, sports and cultural facilities”, Ville de Montréal.
+        <a href="https://donnees.montreal.ca/dataset/installations-recreatives-sportives-et-culturelles/resource/1c239e86-8b36-476c-bd51-91a3cd20f687" target="_blank" rel="noopener">Link to the data</a>.
+        Licence: <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. 
+        Changes: kept only sports, recreational and children’s playground sites, removed unused columns, and added an ID, the seasons and the age group (estimated from the activity name).</p>
       <p>Walking routes: calculated from street data &copy; OpenStreetMap contributors.</p>
+      <button id="info-start" class="start-btn">Start exploring</button>
     </div>
 
     <div id="panel-search" class="panel" hidden>

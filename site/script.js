@@ -7,7 +7,7 @@
 // =====================================================================
 
 // ---------- 0. Settings ----------
-console.log('script.js version 10');   // check in the console (F12) that the new file is loaded
+console.log('script.js version 12');   // check in the console (F12) that the new file is loaded
 const SCHOOLS_FILE = '../data/schools_json_final.geojson';
 const RECREATION_FILE = '../data/recreation_filtered.geojson';
 const ROUTES_FILE = '../data/walking_routes.geojson';
@@ -380,4 +380,15 @@ PAIRS.forEach(function (pair) {
       panel.hidden = (p[1] !== pair[1]) ? true : !panel.hidden;
     });
   });
+});
+
+// ---------- 5. Welcome message ----------
+// The info panel is open when the page loads and the dark backdrop blocks the map,
+// so the reader has to click "Start exploring" first. The (i) button reopens the
+// info later as a normal small panel.
+document.getElementById('info-start').addEventListener('click', function () {
+  const panel = document.getElementById('panel-info');
+  panel.classList.remove('welcome');   // back to a normal small panel
+  panel.hidden = true;                 // closed until the reader clicks (i)
+  document.getElementById('backdrop').hidden = true;
 });

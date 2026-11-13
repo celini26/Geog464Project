@@ -61,8 +61,8 @@ Test 3. I search a false name in the search bar.
 | 8. Accessibility audit | somewhat pass | change the criteria for the name searching 
 
 ## Part 3: what I found, and one fix
-Evidence: Round 2: the user finds the season filter confusing and unrelated to the recreational sites
-Severity: 2
-My change: I will change the seasons into outdoor/indoor
+Evidence: Round 2: the user finds the usage confusing and finds the lack of guided instructions difficult to navigate the features
+Severity: 3
+My change: I will include a title page forcing the user to first read a short manual before using the map
 Recheck: [the same task, given to someone new, with no help.
  Fixed means: they do it without hesitating at that spot]
